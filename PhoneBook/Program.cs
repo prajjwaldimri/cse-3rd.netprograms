@@ -88,13 +88,9 @@ namespace PhoneBook
             WriteLine("Enter search term:");
             var searchTerm = Console.ReadLine();
             List<PhoneBookEntry> contacts;
-            contacts = _phoneBook.FindAll(entry => entry.Name.Equals(searchTerm));
-            if(contacts.Count == 0) {
-                contacts = _phoneBook.FindAll(entry => entry.PhoneNumber.Equals(searchTerm));
-            }
-            if(contacts.Count == 0) {
-                contacts = _phoneBook.FindAll(entry => entry.Address.Equals(searchTerm));
-            }
+            contacts = _phoneBook.FindAll(entry => entry.Name.Equals(searchTerm) 
+            || entry.PhoneNumber.Equals(searchTerm)
+            || entry.Address.Equals(searchTerm));
 
             if(contacts.Count == 0) {
                 WriteLine("Nothing found!", ConsoleColor.DarkCyan);
