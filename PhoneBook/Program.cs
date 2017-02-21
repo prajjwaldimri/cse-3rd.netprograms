@@ -2,93 +2,156 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.IO;
+using Newtonsoft.Json;
+
 
 namespace PhoneBook
 {
     public class Program
     {
-        /* TODO: Make the dictionary data persistent.
-        Also the Dictionary is not a very good data structure for a phonebook as it
-        should always have unique keys.
-        Can create a new structure with two string values to solve this problem.         
-        */
-        private static Dictionary<string,string> _phoneBook;
-        public static void Main()
-        {
-            _phoneBook = new Dictionary<string,string>();
-            Starter();            
+        //TODO: Use this data instead of dictionary
+        private static List<PhoneBookEntry> _phoneBook;
+        private static string _filePath = $"{Directory.GetCurrentDirectory()}/PhoneBook.json";
+        public static void Main() {
+            Starter();
         }
 
         /// <summary>
         /// Provides options to navigate the program.
         /// </summary>
-        private static void Starter()
-        {
-            Console.WriteLine("\n Navigation \n 1: Add Entries to PhoneBook"
-             + "\n 2: Search PhoneBook \n 3: Exit Program");
+        private static void Starter() {
+            _phoneBook = ReadPhoneBook();
+            Console.WriteLine($"Phonebook currently has {_phoneBook.Count} entries");
+            WriteLine("\n Navigation \n 1: Add Entries to PhoneBook"
+             + "\n 2: Search PhoneBook \n 3: Save changes to database \n 4: Exit Program",
+             ConsoleColor.DarkGreen);
             var chosenOption = Console.ReadLine();
             switch(chosenOption)
             {
                 case "1":
-                AddToDictionary();
+                AddToPhoneBook();
                 break;
                 case "2":
-                SearchDictionary();
+                SearchPhoneBook();
                 break;
                 case "3":
+                WritePhoneBook();
+                break;
+                case "4":
                 Environment.Exit(0);
                 break;
                 case "":
-                Console.WriteLine("You didn't enter any option!");
+                WriteLine("You didn't enter any option!", ConsoleColor.Red);
                 break;
                 default:
-                Console.WriteLine("Wrong option chosen");
+                WriteLine("Wrong option chosen", ConsoleColor.Red);
                 break;
             }
             Starter();
         }
 
-        /// <summary>
-        /// Takes input from user and adds to {_phoneBook}
-        /// </summary>
-        private static void AddToDictionary()
-        {
+        private static void AddToPhoneBook() {
             string exitLoop = "";
             while(!exitLoop.Equals("N"))
             {
-                Debug.WriteLine("Data Entry Loop Entered");
-                Console.WriteLine("Enter Name:");
+                WriteLine("Enter Name:");
                 var name = Console.ReadLine();
-                Console.WriteLine("Enter Phone-Number:");
+                WriteLine("Enter Phone-Number:");
                 var number = Console.ReadLine();
-                _phoneBook.Add(name,number);
-                Console.WriteLine("Do you want to keep entering data? Y/N");
+                WriteLine("Enter Address");
+                var address = Console.ReadLine();
+                if(_phoneBook == null) {
+                    _phoneBook = new List<PhoneBookEntry>();
+                }
+                _phoneBook.Add(new PhoneBookEntry {
+                    Name = name,
+                    PhoneNumber = number,
+                    Address = address
+                });
+                WriteLine("Do you want to keep entering data? Y/N");
                 exitLoop = Console.ReadLine().ToUpper();
             }
-            Debug.WriteLine("Data Entry Loop Exited");
+            WriteLine("Do you want to save the added entries to the database? Y/N");
+            if(Console.ReadLine().ToUpper().Equals("Y")) {
+                WritePhoneBook();
+            }
             Starter();
         }
 
-        /// <summary>
-        /// Searches _phoneBook
-        /// </summary>
-        private static void SearchDictionary()
-        {
-            if(_phoneBook.Count == 0){
-                Console.WriteLine("No Data found in the phonebook. Please try again!");
+        private static void SearchPhoneBook() {
+            if(_phoneBook == null || _phoneBook.Count == 0){
+                Console.ForegroundColor = ConsoleColor.DarkRed;
+                WriteLine("No Data found in the phonebook. Try again!", ConsoleColor.Red);
                 return;
             }
-            Console.WriteLine("Enter search term:");
+            WriteLine("Enter search term:");
             var searchTerm = Console.ReadLine();
-            if(_phoneBook.ContainsKey(searchTerm)){
-                Console.WriteLine($"\n The phone number for {searchTerm} is: \t " 
-                + _phoneBook[searchTerm]);
+            List<PhoneBookEntry> contacts;
+            contacts = _phoneBook.FindAll(entry => entry.Name.Equals(searchTerm));
+            if(contacts.Count == 0) {
+                contacts = _phoneBook.FindAll(entry => entry.PhoneNumber.Equals(searchTerm));
             }
-            else{
-                Console.WriteLine($"{searchTerm} not found in the PhoneBook");
+            if(contacts.Count == 0) {
+                contacts = _phoneBook.FindAll(entry => entry.Address.Equals(searchTerm));
+            }
+
+            if(contacts.Count == 0) {
+                WriteLine("Nothing found!", ConsoleColor.DarkCyan);
+                return;
+            }
+
+            WriteLine("\n Printing matched entries!");
+
+            foreach (var entry in contacts) {
+                WriteLine("|NAME| |PHONE NUMBER| |ADDRESS|");
+                WriteLine($"|{entry.Name}| |{entry.PhoneNumber}| |{entry.Address}|", ConsoleColor.DarkCyan);
             }
             Starter();
-        }        
+        }
+
+        private static List<PhoneBookEntry> ReadPhoneBook() {
+            WriteLine("\nSearching for existing phonebook database...");
+            if(File.Exists(_filePath)){
+                WriteLine("Database found. Reading...");
+                var rawPhoneBookData = File.ReadAllText(_filePath);
+                return JsonConvert.DeserializeObject<List<PhoneBookEntry>>(rawPhoneBookData);
+            }
+            WriteLine("Database not found. It will be created automatically. Please continue;");
+            return new List<PhoneBookEntry>();
+        }
+
+        private static void WritePhoneBook() {
+            if(!File.Exists(_filePath)) {
+                File.Create(_filePath);
+            }
+            try {
+            File.WriteAllText(_filePath, JsonConvert.SerializeObject(_phoneBook));
+            WriteLine("Data saved successfully", ConsoleColor.DarkGreen);
+            }
+            catch(Exception e) {
+                WriteLine(e.ToString(),ConsoleColor.DarkYellow);
+                WriteLine("Cannot save data", ConsoleColor.DarkRed);
+            }
+        }
+
+        /// <summary>
+        /// A Little helper method to display text in color inside console
+        /// </summary>
+        /// <param name="text">Text you want to print to console</param>
+        /// <param name="foregroundColor">Color of the printed text</param>
+        private static void WriteLine(string text, ConsoleColor? foregroundColor = null) {
+            if(foregroundColor != null) {
+                Console.ForegroundColor = foregroundColor.Value;
+            }
+            Console.WriteLine(text);
+            Console.ResetColor();
+        }
+    }
+
+    public class PhoneBookEntry {
+        public string Name;
+        public string PhoneNumber;
+        public string Address;
     }
 }
