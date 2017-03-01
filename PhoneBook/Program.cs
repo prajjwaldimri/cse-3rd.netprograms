@@ -10,7 +10,6 @@ namespace PhoneBook
 {
     public class Program
     {
-        //TODO: Use this data instead of dictionary
         private static List<PhoneBookEntry> _phoneBook;
         private static string _filePath = $"{Directory.GetCurrentDirectory()}/PhoneBook.json";
         public static void Main() {
